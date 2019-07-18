@@ -30,7 +30,8 @@ class TransformSpec(base_component.ComponentSpec):
 
   COMPONENT_NAME = 'Transform'
   PARAMETERS = {
-      'module_file': ExecutionParameter(type=(str, Text)),
+      'module_file': ExecutionParameter(type=(str, Text), optional=True),
+      'preprocessing_fn': ExecutionParameter(type=(str, Text), optional=True),
   }
   INPUTS = {
       'input_data': ChannelParameter(type_name='ExamplesPath'),
@@ -60,7 +61,8 @@ class Transform(base_component.BaseComponent):
   def __init__(self,
                input_data: channel.Channel = None,
                schema: channel.Channel = None,
-               module_file: Text = None,
+               module_file: Optional[Text] = None,
+               preprocessing_fn: Optional[Text] = None,
                transform_output: Optional[channel.Channel] = None,
                transformed_examples: Optional[channel.Channel] = None,
                name: Optional[Text] = None):
@@ -72,7 +74,11 @@ class Transform(base_component.BaseComponent):
       schema: A Channel of 'SchemaPath' type. This should contain a single
         schema artifact.
       module_file: The file path to a python module file, from which the
-        'preprocessing_fn' function will be loaded.
+        'preprocessing_fn' function will be loaded. Exactly one of 'module_file'
+        or 'preprocessing_fn' must be supplied.
+      preprocessing_fn: The path to python function that implements
+         a 'preprocessing_fn'. Exactly one of 'module_file' or
+         'preprocessing_fn' must be supplied.
       transform_output: Optional output 'TransformPath' channel for output of
         'tf.Transform', which includes an exported Tensorflow graph suitable for
         both training and serving;
@@ -81,7 +87,16 @@ class Transform(base_component.BaseComponent):
         'eval' splits.
       name: Optional unique name. Necessary iff multiple transform components
         are declared in the same pipeline.
+
+    Raises:
+      ValueError: When both or neither of 'module_file' and 'preprocessing_fn'
+        is supplied.
     """
+    if bool(module_file) == bool(preprocessing_fn):
+      raise ValueError(
+          "Exactly one of 'module_file' or 'preprocessing_fn' must be supplied."
+      )
+
     transform_output = transform_output or channel.Channel(
         type_name='TransformPath',
         artifacts=[types.TfxArtifact('TransformPath')])
@@ -95,6 +110,7 @@ class Transform(base_component.BaseComponent):
         input_data=channel.as_channel(input_data),
         schema=channel.as_channel(schema),
         module_file=module_file,
+        preprocessing_fn=preprocessing_fn,
         transform_output=transform_output,
         transformed_examples=transformed_examples)
     super(Transform, self).__init__(spec=spec, name=name)

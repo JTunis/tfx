@@ -47,11 +47,6 @@ WORKDIR ${TFX_SRC_DIR}
 RUN python setup.py bdist_wheel
 RUN CFLAGS=$(/usr/bin/python3.5-config --cflags) pip install $(find dist -name "tfx-*.whl")[docker-image]
 
-ARG gather_third_party_licenses=true
-RUN if [ "${gather_third_party_licenses}" = "true" ]; then \
-  /tfx-src/tfx/tools/docker/license.sh \
-  /tfx-src/tfx/tools/docker/third_party_licenses.csv \
-  /third_party/licenses; \
-  fi
+RUN /tfx-src/tfx/tools/docker/license.sh /tfx-src/tfx/tools/docker/third_party_licenses.csv /third_party/licenses
 
 ENTRYPOINT ["python3.5", "/tfx-src/tfx/scripts/run_executor.py"]
